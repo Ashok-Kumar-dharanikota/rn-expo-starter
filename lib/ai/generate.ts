@@ -20,7 +20,7 @@ function resolveApiKey(): string {
 
 /** Coerce a raw AI JSON payload into a fully-formed GeneratedStack. */
 function normalize(raw: any, prompt: string): GeneratedStack {
-  const local = generateStack(prompt); // reused for structure + app.json helpers
+  const local = generateStack(prompt); // reused for structure + fallback defaults
 
   const groups: StackGroup[] = Array.isArray(raw?.groups)
     ? raw.groups.map((g: any) => ({
@@ -39,19 +39,32 @@ function normalize(raw: any, prompt: string): GeneratedStack {
       }))
     : local.groups;
 
-  const appName = String(raw?.appName ?? local.appName);
-  const displayName = String(raw?.displayName ?? local.displayName);
+  const appName = String(raw?.appName ?? raw?.application?.slug ?? local.appName);
+  const displayName = String(raw?.displayName ?? raw?.application?.name ?? local.displayName);
 
   return {
     appName,
     displayName,
-    summary: String(raw?.summary ?? local.summary),
+    summary: String(raw?.summary ?? raw?.application?.summary ?? local.summary),
+    category: raw?.category ?? raw?.application?.category ?? local.category,
+    archetype: raw?.archetype ?? raw?.application?.archetype ?? local.archetype,
     groups,
-    // Reuse local scaffolding for the tree + app.json so output stays coherent.
-    folderStructure: local.folderStructure,
-    appJson: local.appJson,
+    folderStructure: raw?.folderStructure ? (typeof raw.folderStructure === "string" ? raw.folderStructure : local.folderStructure) : local.folderStructure,
+    appJson: raw?.appJson ? (typeof raw.appJson === "string" ? raw.appJson : local.appJson) : local.appJson,
     defaultView: local.defaultView,
     source: "ai",
+
+    // Extended Architecture Dashboard fields
+    executiveSummary: raw?.executiveSummary ?? local.executiveSummary,
+    detectedFeatures: raw?.detectedFeatures ?? raw?.features?.detected ?? local.detectedFeatures,
+    inferredFeatures: raw?.inferredFeatures ?? raw?.features?.inferred ?? local.inferredFeatures,
+    architectureDecisions: raw?.architectureDecisions ?? raw?.architecture ?? local.architectureDecisions,
+    rationales: raw?.rationales ?? local.rationales,
+    cloudServices: raw?.cloudServices ?? raw?.backendServices?.services ?? local.cloudServices,
+    environmentVariables: raw?.environmentVariables ?? local.environmentVariables,
+    permissions: raw?.permissions ?? local.permissions,
+    roadmap: raw?.roadmap ?? local.roadmap,
+    evaluation: raw?.evaluation ?? local.evaluation,
   };
 }
 

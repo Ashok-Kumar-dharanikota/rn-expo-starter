@@ -27,6 +27,8 @@ const config: Config = {
         // Expo signature indigo — reserved for highlights, selection, focus
         accent: { DEFAULT: c("accent"), foreground: c("accent-foreground") },
         success: { DEFAULT: c("success"), foreground: c("success-foreground") },
+        warning: c("warning"),
+        danger: c("danger"),
       },
       fontFamily: {
         sans: [

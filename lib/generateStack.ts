@@ -2,9 +2,22 @@ import type {
   GeneratedStack,
   OutputView,
   PackageCategory,
+  PackageTier,
   StackGroup,
   StackPackage,
+  DetectedFeature,
+  InferredFeature,
+  ArchitectureDecisionsData,
+  CloudService,
+  EnvironmentVariableItem,
+  PermissionItem,
+  RoadmapPhaseItem,
+  ArchitectureEvaluationData,
+  ExecutiveSummaryData,
 } from "./types";
+import { PRINCIPAL_ENGINEER_KNOWLEDGE_BASE } from "./ai/knowledgeBase";
+import { ARCHITECTURAL_RATIONALES } from "./ai/architecturalRationales";
+import { RECOMMENDED_CLOUD_SERVICES_MATRIX } from "./ai/cloudServicesMatrix";
 
 type Seed = Omit<StackPackage, "category">;
 
@@ -18,15 +31,28 @@ interface CapabilityRule {
 
 const p = (
   name: string,
+  purpose: string,
   reason: string,
+  tier: "Essential" | "Recommended" | "Optional" = "Essential",
   installer: "expo" | "npm" = "expo",
   optional = false,
+  configNeeded = "",
+  hasConfigPlugin = false,
+  alternatives: string[] = [],
+  docUrl = "https://docs.expo.dev/versions/latest/sdk/overview/"
 ): Seed => ({
   name,
+  purpose,
   reason,
+  tier,
   installer,
   optional,
   defaultSelected: !optional,
+  expoCompatibility: "Expo SDK 52+ Compatible",
+  configNeeded,
+  hasConfigPlugin,
+  alternatives,
+  docUrl,
 });
 
 /** Always-present foundation. */
@@ -38,7 +64,15 @@ const CORE: StackGroup[] = [
         category: "Routing",
         ...p(
           "expo-router",
-          "File-based routing built for universal Expo apps, with typed routes and deep linking out of the box.",
+          "File-Based App Router",
+          "Official Expo file-based router enabling universal deep linking, typed routes, and React Native Server Component readiness.",
+          "Essential",
+          "expo",
+          false,
+          "app.json plugin: 'expo-router'",
+          true,
+          ["React Navigation v6"],
+          "https://docs.expo.dev/router/introduction/"
         ),
       },
     ],
@@ -50,8 +84,15 @@ const CORE: StackGroup[] = [
         category: "Styling",
         ...p(
           "nativewind",
-          "Tailwind CSS for React Native — one styling language across iOS, Android, and web.",
+          "Universal Tailwind CSS Engine",
+          "Brings Tailwind CSS to React Native for consistent cross-platform styling across iOS, Android, and Web.",
+          "Essential",
           "npm",
+          false,
+          "tailwind.config.js & babel plugin",
+          false,
+          ["Unistyles", "Tamagui", "StyleSheet"],
+          "https://www.nativewind.dev/"
         ),
       },
     ],
@@ -63,8 +104,15 @@ const CORE: StackGroup[] = [
         category: "State",
         ...p(
           "@tanstack/react-query",
-          "Server-state, caching, and background refetching without hand-rolled loading logic.",
+          "Async Server-State Manager",
+          "Eliminates hand-rolled loading/error state with automatic query caching, background polling, and optimistic mutation queues.",
+          "Essential",
           "npm",
+          false,
+          "QueryClientProvider wrapper",
+          false,
+          ["SWR", "Redux Toolkit"],
+          "https://tanstack.com/query/latest"
         ),
       },
     ],
@@ -80,17 +128,39 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "expo-secure-store",
-        "Encrypted key–value storage for session tokens, backed by Keychain / Keystore.",
+        "Encrypted Vault Storage",
+        "Hardware-backed encryption for session tokens, JWTs, and secret keys using iOS Keychain and Android Keystore.",
+        "Essential",
+        "expo",
+        false,
+        "app.json plugin: 'expo-secure-store'",
+        true,
+        ["AsyncStorage"],
+        "https://docs.expo.dev/versions/latest/sdk/securestore/"
       ),
       p(
         "expo-local-authentication",
-        "Gates the app behind Face ID, Touch ID, or fingerprint for biometric login.",
+        "Biometric Security Wall",
+        "Enables Face ID, Touch ID, and fingerprint authentication guards for sensitive user actions.",
+        "Recommended",
+        "expo",
+        false,
+        "iOS NSFaceIDUsageDescription permission string",
+        true,
+        ["Passcodes"],
+        "https://docs.expo.dev/versions/latest/sdk/local-authentication/"
       ),
       p(
         "expo-auth-session",
-        "Alternative: hosted OAuth / OpenID Connect flows (Google, Apple, GitHub).",
+        "OAuth 2.0 PKCE Session Engine",
+        "Handles OAuth 2.0 and OpenID Connect browser redirects for Google, Apple, and GitHub logins.",
+        "Optional",
         "expo",
         true,
+        "Deep link scheme in app.json",
+        true,
+        ["Clerk", "Auth0"],
+        "https://docs.expo.dev/versions/latest/sdk/auth-session/"
       ),
     ],
     routes: ["app/(auth)/sign-in.tsx", "app/(auth)/sign-up.tsx"],
@@ -103,29 +173,39 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "react-native-reanimated",
-        "The performance standard for fluid, gesture-driven animations on the UI thread.",
+        "UI-Thread Animation Driver",
+        "The industry standard for 60fps gesture-driven animations running natively on the UI thread.",
+        "Recommended",
+        "npm",
+        false,
+        "Babel plugin & app.json plugin",
+        true,
+        ["Animated API"],
+        "https://docs.swmansion.com/react-native-reanimated/"
       ),
       p(
         "react-native-gesture-handler",
-        "Native-driven touch + gesture system that pairs with Reanimated.",
-      ),
-      p(
-        "moti",
-        "Alternative: a declarative animation layer on top of Reanimated for simpler transitions.",
+        "Native Touch System",
+        "Provides native touch gesture recognizers that pair seamlessly with Reanimated.",
+        "Recommended",
         "npm",
+        false,
+        "GestureHandlerRootView wrapper",
         true,
-      ),
-      p(
-        "lottie-react-native",
-        "Alternative: render After Effects / Lottie vector animations.",
-        "expo",
-        true,
+        ["PanResponder"],
+        "https://docs.swmansion.com/react-native-gesture-handler/"
       ),
       p(
         "expo-haptics",
-        "Tactile feedback for key interactions — subtle polish on primary flows.",
+        "Tactile Haptic Feedback",
+        "Triggers subtle hardware haptic vibrations on key user interactions for enhanced sensory feedback.",
+        "Optional",
         "expo",
         true,
+        "Zero native config",
+        false,
+        [],
+        "https://docs.expo.dev/versions/latest/sdk/haptics/"
       ),
     ],
   },
@@ -137,17 +217,27 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "expo-location",
-        "Foreground and background geolocation with permission handling for live tracking.",
+        "Geolocation Telemetry Engine",
+        "Handles foreground/background GPS location sampling with native permission prompts.",
+        "Essential",
+        "expo",
+        false,
+        "app.json plugin with location permission strings",
+        true,
+        ["react-native-geolocation-service"],
+        "https://docs.expo.dev/versions/latest/sdk/location/"
       ),
       p(
         "react-native-maps",
-        "Native map rendering with markers, polylines, and real-time camera updates.",
-      ),
-      p(
-        "expo-task-manager",
-        "Alternative: background location tasks that keep tracking when the app is closed.",
-        "expo",
+        "Native Map Renderer",
+        "Renders Apple Maps on iOS and Google Maps on Android with markers, polylines, and camera controls.",
+        "Recommended",
+        "npm",
+        false,
+        "Google Maps API Key in app.json",
         true,
+        ["Mapbox GL"],
+        "https://github.com/react-native-maps/react-native-maps"
       ),
     ],
     routes: ["app/(tabs)/map.tsx"],
@@ -160,17 +250,15 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "expo-notifications",
-        "Push and local notifications with scheduling, handlers, and permission prompts.",
-      ),
-      p(
-        "expo-device",
-        "Reads device metadata required to register a push token.",
-      ),
-      p(
-        "@notifee/react-native",
-        "Alternative: rich, fully-customizable local notifications with channels and actions.",
-        "npm",
+        "Push & Local Notification Manager",
+        "Schedules local alerts and manages Expo / APNs / FCM push notification registration tokens.",
+        "Essential",
+        "expo",
+        false,
+        "app.json plugin & notification icon assets",
         true,
+        ["OneSignal", "Notifee"],
+        "https://docs.expo.dev/versions/latest/sdk/notifications/"
       ),
     ],
     routes: ["app/(tabs)/inbox.tsx"],
@@ -183,7 +271,15 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "expo-camera",
-        "Camera capture with barcode / QR scanning and fine-grained permissions.",
+        "Native Camera & Barcode Scanner",
+        "High-performance camera view supporting photo capture, video recording, and barcode/QR scanning.",
+        "Essential",
+        "expo",
+        false,
+        "app.json camera & microphone permission strings",
+        true,
+        ["react-native-vision-camera"],
+        "https://docs.expo.dev/versions/latest/sdk/camera/"
       ),
     ],
     routes: ["app/(tabs)/scan.tsx"],
@@ -196,17 +292,39 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "expo-image",
-        "High-performance image component with caching, blurhash placeholders, and transitions.",
+        "High-Performance Image Component",
+        "Optimized image viewer with disk caching, Blurhash placeholders, and cross-fade transition effects.",
+        "Essential",
+        "expo",
+        false,
+        "Zero extra config",
+        false,
+        ["react-native-fast-image"],
+        "https://docs.expo.dev/versions/latest/sdk/image/"
       ),
       p(
         "expo-image-picker",
-        "Lets users pick or capture photos and videos from the library or camera.",
+        "Media Library & Camera Picker",
+        "Provides native photo picker sheets for selecting images and videos from the system photo library.",
+        "Recommended",
+        "expo",
+        false,
+        "app.json photo library permission strings",
+        true,
+        [],
+        "https://docs.expo.dev/versions/latest/sdk/image-picker/"
       ),
       p(
         "expo-video",
-        "Alternative: modern video playback replacing the legacy expo-av Video API.",
+        "Modern Video Playback Engine",
+        "SDK 52+ video player separating player lifecycle logic from UI VideoView components.",
+        "Optional",
         "expo",
         true,
+        "app.json plugin: 'expo-video'",
+        true,
+        ["react-native-video"],
+        "https://docs.expo.dev/versions/latest/sdk/video/"
       ),
     ],
   },
@@ -217,19 +335,28 @@ const RULES: CapabilityRule[] = [
       /\b(offline|sync|local\s?db|database|persist|cache|sqlite|store\s?locally|works?\s?offline)\b/i,
     packages: [
       p(
-        "expo-sqlite",
-        "On-device SQL database powering offline-first reads and a sync queue.",
+        "op-sqlite",
+        "High-Speed Embedded SQLite Engine",
+        "Ultra-fast local SQL database operating via C++ JSI bindings for offline-first reads and mutation queues.",
+        "Essential",
+        "npm",
+        false,
+        "Custom Dev Client build required",
+        false,
+        ["expo-sqlite", "WatermelonDB"],
+        "https://github.com/OP-Engineering/op-sqlite"
       ),
       p(
-        "@react-native-async-storage/async-storage",
-        "Lightweight persistence for query-cache hydration and preferences.",
+        "react-native-mmkv",
+        "Ultra-Fast Key-Value Storage",
+        "30x faster than AsyncStorage for persisting query cache state, active sessions, and user settings.",
+        "Recommended",
         "npm",
-      ),
-      p(
-        "drizzle-orm",
-        "Alternative: a typed SQL query builder over expo-sqlite with migrations.",
-        "npm",
-        true,
+        false,
+        "Custom Dev Client build required",
+        false,
+        ["AsyncStorage"],
+        "https://github.com/mrousavy/react-native-mmkv"
       ),
     ],
   },
@@ -241,8 +368,15 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "@supabase/supabase-js",
-        "Realtime subscriptions and a hosted Postgres backend for live data and chat.",
+        "Realtime Postgres & Auth Client",
+        "Managed Postgres database client with WebSocket realtime subscriptions, Row Level Security, and Auth.",
+        "Essential",
         "npm",
+        false,
+        "EXPO_PUBLIC_SUPABASE_URL env key",
+        false,
+        ["Firebase", "Convex"],
+        "https://supabase.com/docs/reference/javascript/introduction"
       ),
     ],
   },
@@ -254,13 +388,15 @@ const RULES: CapabilityRule[] = [
     packages: [
       p(
         "@stripe/stripe-react-native",
-        "PCI-compliant payment sheet with Apple Pay and Google Pay support.",
-      ),
-      p(
-        "react-native-iap",
-        "Alternative: native in-app purchases and subscriptions via the App / Play stores.",
+        "PCI-Compliant Stripe SDK",
+        "Native payment sheet interface supporting Apple Pay, Google Pay, and credit card processing.",
+        "Essential",
         "npm",
+        false,
+        "app.json plugin & merchantIdentifier",
         true,
+        ["RevenueCat", "react-native-iap"],
+        "https://stripe.com/docs/stripe-react-native"
       ),
     ],
     routes: ["app/(tabs)/checkout.tsx"],
@@ -269,25 +405,37 @@ const RULES: CapabilityRule[] = [
     id: "ai",
     category: "AI",
     keywords:
-      /\b(ai|ml|recommend(ation|ations)?|assistant|chatbot|chat\s?bot|gpt|llm|smart|intelligent|personaliz)/i,
+      /\b(ai|ml|recommend(ation|ations)?|assistant|chatbot|chat\s?bot|gpt|llm|smart|intelligent|personaliz)\b/i,
     packages: [
       p(
-        "ai",
-        "Vercel AI SDK for streaming model responses and building assistant flows.",
-        "npm",
+        "expo-audio",
+        "Native Audio Recording & Voice API",
+        "SDK 52+ audio engine for recording voice dictation prompts and playing AI voice responses.",
+        "Essential",
+        "expo",
+        false,
+        "app.json microphone permission string",
+        true,
+        ["expo-speech"],
+        "https://docs.expo.dev/versions/latest/sdk/audio/"
       ),
       p(
-        "openai",
-        "Alternative: the official OpenAI client for direct API access.",
+        "react-native-markdown-display",
+        "Fast Markdown Renderer",
+        "Tokenizes and formats AI streaming markdown responses, code blocks, and lists.",
+        "Recommended",
         "npm",
-        true,
+        false,
+        "Zero extra config",
+        false,
+        [],
+        "https://github.com/iamhowch/react-native-markdown-display"
       ),
     ],
     routes: ["app/(tabs)/assistant.tsx"],
   },
 ];
 
-/** app.json config-plugin entries contributed by a package. */
 const PLUGIN_CONFIG: Record<
   string,
   string | [string, Record<string, unknown>]
@@ -344,8 +492,8 @@ function deriveNames(prompt: string): { displayName: string; appName: string } {
 }
 
 function mergeGroups(groups: StackGroup[]): StackGroup[] {
-  const order: PackageCategory[] = [];
-  const map = new Map<PackageCategory, StackPackage[]>();
+  const order: (PackageCategory | PackageTier)[] = [];
+  const map = new Map<PackageCategory | PackageTier, StackPackage[]>();
   const seen = new Set<string>();
 
   for (const group of groups) {
@@ -364,7 +512,7 @@ function mergeGroups(groups: StackGroup[]): StackGroup[] {
   return order.map((category) => ({ category, packages: map.get(category)! }));
 }
 
-function categoryRoute(category: PackageCategory): string | null {
+function categoryRoute(category: PackageCategory | PackageTier): string | null {
   switch (category) {
     case "Location & Maps":
       return "map.tsx";
@@ -393,30 +541,28 @@ function buildFolderStructure(
 
   const lines: string[] = [];
   lines.push(`${appName}/`);
-  lines.push(`├─ app/`);
-  lines.push(`│  ├─ _layout.tsx`);
+  lines.push(`├─ src/`);
+  lines.push(`│  ├─ app/`);
+  lines.push(`│  │  ├─ _layout.tsx`);
   if (hasAuth) {
-    lines.push(`│  ├─ (auth)/`);
-    lines.push(`│  │  ├─ _layout.tsx`);
-    lines.push(`│  │  ├─ sign-in.tsx`);
-    lines.push(`│  │  └─ sign-up.tsx`);
+    lines.push(`│  │  ├─ (auth)/`);
+    lines.push(`│  │  │  ├─ _layout.tsx`);
+    lines.push(`│  │  │  ├─ sign-in.tsx`);
+    lines.push(`│  │  │  └─ sign-up.tsx`);
   }
   if (hasTabs) {
-    lines.push(`│  ├─ (tabs)/`);
-    lines.push(`│  │  ├─ _layout.tsx`);
-    lines.push(`│  │  ├─ index.tsx`);
-    tabScreens.forEach((screen) => lines.push(`│  │  ├─ ${screen}`));
-    lines.push(`│  │  └─ profile.tsx`);
+    lines.push(`│  │  ├─ (tabs)/`);
+    lines.push(`│  │  │  ├─ _layout.tsx`);
+    lines.push(`│  │  │  ├─ index.tsx`);
+    tabScreens.forEach((screen) => lines.push(`│  │  │  ├─ ${screen}`));
+    lines.push(`│  │  │  └─ profile.tsx`);
   } else {
-    lines.push(`│  ├─ index.tsx`);
+    lines.push(`│  │  ├─ index.tsx`);
   }
-  lines.push(`│  └─ +not-found.tsx`);
-  lines.push(`├─ components/`);
-  lines.push(`│  ├─ ui/`);
-  lines.push(`│  └─ providers.tsx`);
-  lines.push(`├─ lib/`);
-  lines.push(`│  ├─ api.ts`);
-  lines.push(`│  └─ query-client.ts`);
+  lines.push(`│  │  └─ +not-found.tsx`);
+  lines.push(`│  ├─ features/`);
+  lines.push(`│  ├─ components/ui/`);
+  lines.push(`│  └─ services/`);
   lines.push(`├─ assets/`);
   lines.push(`├─ app.json`);
   lines.push(`├─ tailwind.config.js`);
@@ -424,7 +570,6 @@ function buildFolderStructure(
   return lines.join("\n");
 }
 
-/** Build the two install commands from a set of selected packages. */
 export function buildCommands(selected: StackPackage[]): {
   expo: string | null;
   npm: string | null;
@@ -441,7 +586,6 @@ export function buildCommands(selected: StackPackage[]): {
   };
 }
 
-/** Build app.json reflecting the currently selected packages. */
 export function buildAppJson(
   appName: string,
   displayName: string,
@@ -480,40 +624,269 @@ export function buildAppJson(
   return JSON.stringify(config, null, 2);
 }
 
-/** Flatten groups into a package list. */
 export function flattenPackages(groups: StackGroup[]): StackPackage[] {
   return groups.flatMap((g) => g.packages);
+}
+
+function matchCategory(prompt: string): string {
+  const pLower = prompt.toLowerCase();
+  for (const catKey of Object.keys(PRINCIPAL_ENGINEER_KNOWLEDGE_BASE)) {
+    if (pLower.includes(catKey.toLowerCase())) {
+      return catKey;
+    }
+  }
+  if (pLower.includes("food") || pLower.includes("restaurant") || pLower.includes("delivery")) return "Food Delivery";
+  if (pLower.includes("social") || pLower.includes("feed") || pLower.includes("post")) return "Social App";
+  if (pLower.includes("chat") || pLower.includes("message")) return "Messaging";
+  if (pLower.includes("shop") || pLower.includes("market") || pLower.includes("buy")) return "Marketplace";
+  if (pLower.includes("health") || pLower.includes("doctor") || pLower.includes("patient")) return "Healthcare";
+  if (pLower.includes("bank") || pLower.includes("money") || pLower.includes("finance")) return "Banking";
+  if (pLower.includes("workout") || pLower.includes("fitness") || pLower.includes("gym")) return "Fitness";
+  if (pLower.includes("learn") || pLower.includes("course") || pLower.includes("education")) return "Education";
+  if (pLower.includes("flight") || pLower.includes("hotel") || pLower.includes("travel")) return "Travel";
+  if (pLower.includes("lead") || pLower.includes("crm") || pLower.includes("sales")) return "CRM";
+  if (pLower.includes("inventory") || pLower.includes("stock") || pLower.includes("warehouse")) return "Inventory";
+  if (pLower.includes("ai") || pLower.includes("gpt") || pLower.includes("bot")) return "AI Assistant";
+  if (pLower.includes("expense") || pLower.includes("budget")) return "Expense Tracker";
+  return "Productivity";
 }
 
 const DEFAULT_PROMPT =
   "A food delivery app with user login, live order tracking on maps, push notifications, and secure in-app payments.";
 
-/** Deterministic local generation — the default, backend-free path. */
 export function generateStack(rawPrompt: string): GeneratedStack {
   const prompt = rawPrompt.trim().length > 0 ? rawPrompt.trim() : DEFAULT_PROMPT;
   const matched = RULES.filter((rule) => rule.keywords.test(prompt));
 
-  const groups = mergeGroups([
-    ...CORE,
-    ...matched.map((rule) => ({
-      category: rule.category,
-      packages: rule.packages.map((seed) => ({
+  const allRawPackages: StackPackage[] = [
+    ...CORE.flatMap((g) => g.packages),
+    ...matched.flatMap((rule) =>
+      rule.packages.map((seed) => ({
         ...seed,
         category: rule.category,
-      })),
-    })),
-  ]);
+      }))
+    ),
+  ];
+
+  // Deduplicate packages by name
+  const seenPkgs = new Set<string>();
+  const uniquePkgs: StackPackage[] = [];
+  for (const pkg of allRawPackages) {
+    if (!seenPkgs.has(pkg.name)) {
+      seenPkgs.add(pkg.name);
+      uniquePkgs.push(pkg);
+    }
+  }
+
+  // Group into three distinct Tiers: Essential, Recommended, Optional
+  const essentialPkgs = uniquePkgs.filter((p) => p.tier === "Essential" || (!p.tier && !p.optional));
+  const recommendedPkgs = uniquePkgs.filter((p) => p.tier === "Recommended");
+  const optionalPkgs = uniquePkgs.filter((p) => p.tier === "Optional" || p.optional);
+
+  const groups: StackGroup[] = [
+    ...(essentialPkgs.length > 0 ? [{ category: "Essential" as const, packages: essentialPkgs }] : []),
+    ...(recommendedPkgs.length > 0 ? [{ category: "Recommended" as const, packages: recommendedPkgs }] : []),
+    ...(optionalPkgs.length > 0 ? [{ category: "Optional" as const, packages: optionalPkgs }] : []),
+  ];
 
   const { displayName, appName } = deriveNames(prompt);
-  const featureCats = matched.map((r) => r.category);
-  const uniqueCats = Array.from(new Set(featureCats));
+  const categoryKey = matchCategory(prompt);
+  const knowledge = PRINCIPAL_ENGINEER_KNOWLEDGE_BASE[categoryKey] || PRINCIPAL_ENGINEER_KNOWLEDGE_BASE["Productivity"];
 
-  const summary =
-    uniqueCats.length > 0
-      ? `Detected ${uniqueCats.length} capability ${
-          uniqueCats.length === 1 ? "domain" : "domains"
-        }: ${uniqueCats.join(", ")}.`
-      : "Baseline universal setup with the Expo core.";
+  const summary = `Architectural blueprint generated for ${categoryKey}. Designed with a Feature-First modular structure and offline-first resilience.`;
+
+  const detectedFeatures: DetectedFeature[] = matched.map((r, i) => ({
+    id: `det-${i + 1}`,
+    name: `${r.category} Engine`,
+    description: `Core functionality for ${r.category.toLowerCase()}`,
+    category: r.category,
+    priority: "must-have",
+  }));
+
+  const inferredFeatures: InferredFeature[] = knowledge.inferredCapabilities.slice(0, 5).map((cap, i) => ({
+    id: `inf-${i + 1}`,
+    name: cap,
+    description: `Implicit production requirement for ${categoryKey}`,
+    category: "Architecture",
+    justification: `Essential production safeguard inferred by Principal Architect for ${categoryKey}.`,
+    ommissionRisk: i === 0 ? "Critical" : i < 3 ? "High" : "Medium",
+  }));
+
+  const architectureDecisions: ArchitectureDecisionsData = {
+    pattern: {
+      name: "Feature-First Modular Architecture",
+      description: "Encapsulates app features in domain subdirectories for high maintainability.",
+      reasonForChoice: `Prevents cross-domain coupling in ${categoryKey} codebases.`,
+    },
+    stateStrategy: {
+      clientState: "Zustand (Global UI State)",
+      serverState: "TanStack Query v5 (Optimistic Sync)",
+      formState: "React Hook Form + Zod",
+      rationale: "Clean separation between transient UI state and remote server state.",
+    },
+    dataPersistence: {
+      primaryStorage: "op-sqlite",
+      cacheLayer: "react-native-mmkv",
+    },
+    routingModel: {
+      framework: "Expo Router v3 (File-based)",
+      typeSafety: "Strict Typed Routes",
+      deepLinkingScheme: appName.replace(/-/g, ""),
+    },
+    offlineStrategy: {
+      mode: knowledge.offlineStrategy,
+      queueEngine: "TanStack Query Mutations + MMKV Persister",
+      conflictResolution: "Last-Write-Wins",
+    },
+    securityModel: {
+      secureStorage: "Expo SecureStore",
+      authHeaderStrategy: "Bearer JWT with Silent Refresh Queue",
+      biometricsEnabled: true,
+    },
+    tradeOffRationale: knowledge.securityConsiderations,
+  };
+
+  const cloudServices: CloudService[] = Object.values(RECOMMENDED_CLOUD_SERVICES_MATRIX);
+
+  const environmentVariables: EnvironmentVariableItem[] = [
+    {
+      key: `EXPO_PUBLIC_API_URL`,
+      description: "Base API URL for remote backend services",
+      isPublic: true,
+      required: true,
+      exampleValue: "https://api.example.com",
+      stage: "all",
+    },
+    {
+      key: `EXPO_PUBLIC_${appName.toUpperCase().replace(/-/g, "_")}_KEY`,
+      description: "Public client application identifier",
+      isPublic: true,
+      required: true,
+      exampleValue: "pk_live_984210",
+      stage: "all",
+    },
+  ];
+
+  const permissions: PermissionItem[] = [
+    {
+      permissionKey: "NSCameraUsageDescription",
+      platform: "ios",
+      userPromptReason: "Allow camera access for scanning and media capture.",
+      configPluginRequired: true,
+    },
+    {
+      permissionKey: "NSLocationWhenInUseUsageDescription",
+      platform: "ios",
+      userPromptReason: "Allow location access to enable maps and nearby discovery.",
+      configPluginRequired: true,
+    },
+  ];
+
+  const roadmap: RoadmapPhaseItem[] = [
+    {
+      phaseNumber: 1,
+      title: "Foundation & Routing Setup",
+      description: "Initialize Expo Router v3, NativeWind styling, and theme provider.",
+      estimatedDays: 3,
+      milestones: [
+        {
+          id: "m-1",
+          task: "Configure Expo Router file-based layout and tab navigation",
+          category: "Setup",
+          deliverable: "Working tab navigator and root stack",
+        },
+      ],
+    },
+    {
+      phaseNumber: 2,
+      title: "Data Layer & Auth Persistence",
+      description: "Setup Supabase client, OP-SQLite local cache, and SecureStore token persistence.",
+      estimatedDays: 4,
+      milestones: [
+        {
+          id: "m-2",
+          task: "Implement offline mutation queue and MMKV cache persister",
+          category: "Backend",
+          deliverable: "Zero-data-loss local persistence layer",
+        },
+      ],
+    },
+    {
+      phaseNumber: 3,
+      title: "Core Feature & Production Hardening",
+      description: "Build domain features, configure push notifications, and add Sentry telemetry.",
+      estimatedDays: 7,
+      milestones: [
+        {
+          id: "m-3",
+          task: "Integrate Sentry crash reporting and OTA updates",
+          category: "Testing",
+          deliverable: "Production-ready build pipeline",
+        },
+      ],
+    },
+  ];
+
+  const evaluation: ArchitectureEvaluationData = {
+    overallScore: 92,
+    scoreBreakdown: {
+      scalability: 94,
+      maintainability: 95,
+      offlineResilience: 90,
+      securityGrade: 92,
+      developerVelocity: 91,
+    },
+    complexity: {
+      level: "Medium",
+      rating: 6,
+      keyDrivers: ["Offline synchronization queue", "Real-time state subscriptions"],
+    },
+    timeline: {
+      estimatedTotalWeeks: 3,
+      estimatedDeveloperHours: 110,
+      recommendedTeamSize: "1-2 Mobile Engineers",
+      phaseDurations: {
+        "Phase 1": "3 Days",
+        "Phase 2": "4 Days",
+        "Phase 3": "7 Days",
+      },
+    },
+    risksAndMitigations: [
+      {
+        risk: "Intermittent cellular connectivity causing mutation drops",
+        impact: "High",
+        mitigationStrategy: "Use local OP-SQLite mutation queue with exponential backoff sync.",
+      },
+    ],
+  };
+
+  const executiveSummary: ExecutiveSummaryData = {
+    applicationType: `${categoryKey} (${knowledge.commonArchitecture.split("+")[0].trim()})`,
+    complexity: "Medium (6/10)",
+    estimatedDevTime: "~3 Weeks (110 developer hours)",
+    estimatedMonthlyCost: "$0.00 / mo (Free Tier Start)",
+    productionReadiness: "92% Production Ready",
+    readinessFlags: {
+      offlineReady: true,
+      authReady: matched.some((r) => r.id === "auth") || Boolean(knowledge.inferredCapabilities.some(c => c.includes("Auth"))),
+      paymentsReady: matched.some((r) => r.id === "payments") || Boolean(knowledge.inferredCapabilities.some(c => c.includes("Pay"))),
+      analyticsReady: true,
+      notificationReady: matched.some((r) => r.id === "notifications") || Boolean(knowledge.inferredCapabilities.some(c => c.includes("Push"))),
+    },
+    expoCompatibility: "Expo SDK 52+ Universal (iOS, Android, Web)",
+    potentialRisks: [
+      "Intermittent cellular connectivity causing mutation drops during background sync.",
+      "iOS background location/audio tasks being throttled by OS power management."
+    ],
+    missingFeatures: [
+      "Multi-tenant team RBAC permissions module",
+      "Automated PDF export report generator"
+    ],
+    recommendedImprovements: [
+      "Integrate PostHog Feature Flags for dynamic feature rollouts without App Store resubmission.",
+      "Configure Sentry source-map symbolication in CI/CD build pipeline."
+    ]
+  };
 
   const defaultView: OutputView = matched.length > 0 ? "structure" : "config";
 
@@ -521,6 +894,8 @@ export function generateStack(rawPrompt: string): GeneratedStack {
     appName,
     displayName,
     summary,
+    category: categoryKey,
+    archetype: knowledge.commonArchitecture.split("+")[0].trim(),
     groups,
     folderStructure: buildFolderStructure(appName, groups),
     appJson: buildAppJson(
@@ -530,6 +905,18 @@ export function generateStack(rawPrompt: string): GeneratedStack {
     ),
     defaultView,
     source: "local",
+
+    // Dashboard data
+    executiveSummary,
+    detectedFeatures,
+    inferredFeatures,
+    architectureDecisions,
+    rationales: ARCHITECTURAL_RATIONALES,
+    cloudServices,
+    environmentVariables,
+    permissions,
+    roadmap,
+    evaluation,
   };
 }
 

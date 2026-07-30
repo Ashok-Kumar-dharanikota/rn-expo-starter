@@ -28,6 +28,8 @@
     --accent-foreground: 255 255 255;
     --success: 21 127 60;
     --success-foreground: 255 255 255;
+    --warning: 180 83 9;
+    --danger: 190 24 55;
 
     /* Terminal surface (kept dark in both themes, like a real shell) */
     --term-bg: 12 13 14;
@@ -61,6 +63,8 @@
     --accent-foreground: 255 255 255;
     --success: 47 190 98;
     --success-foreground: 8 12 9;
+    --warning: 240 176 96;
+    --danger: 248 113 133;
 
     --term-bg: 9 10 11;
     --term-line: 32 34 37;
@@ -129,6 +133,84 @@
     text-wrap: balance;
   }
 }
+
+/* ── Phone mockup micro-animations (feature previews) ─────────────── */
+@keyframes mk-scan {
+  0%, 100% { transform: translateY(-14px); opacity: 0.15; }
+  50% { transform: translateY(14px); opacity: 0.9; }
+}
+@keyframes mk-ring {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  70% { transform: scale(1.25); opacity: 0; }
+  100% { opacity: 0; }
+}
+@keyframes mk-rise {
+  0% { transform: translateY(100%); }
+  55%, 100% { transform: translateY(0); }
+}
+@keyframes mk-pop {
+  0%, 40% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes mk-drop {
+  0% { transform: translateY(-140%); opacity: 0; }
+  15%, 80% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-140%); opacity: 0; }
+}
+@keyframes mk-sync {
+  0% { transform: translateX(0); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateX(64px); opacity: 0; }
+}
+@keyframes mk-ping {
+  0% { transform: scale(0.4); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes mk-pin {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes mk-flash {
+  0%, 92%, 100% { opacity: 0; }
+  95% { opacity: 0.8; }
+}
+@keyframes mk-bubble {
+  0% { transform: translateY(8px) scale(0.9); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes mk-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+@keyframes mk-bar {
+  0% { transform: scaleY(0.15); }
+  100% { transform: scaleY(1); }
+}
+@keyframes mk-stream {
+  0% { width: 0; opacity: 0.4; }
+  100% { opacity: 1; }
+}
+@keyframes mk-fade-seq {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+.mk-scan { animation: mk-scan 2.4s ease-in-out infinite; }
+.mk-ring { animation: mk-ring 2.4s ease-out infinite; }
+.mk-rise { animation: mk-rise 3s ease-in-out infinite; }
+.mk-pop { animation: mk-pop 3s ease-in-out infinite; }
+.mk-drop { animation: mk-drop 3.2s ease-in-out infinite; }
+.mk-sync { animation: mk-sync 2.2s ease-in-out infinite; }
+.mk-ping { animation: mk-ping 2.4s ease-out infinite; }
+.mk-pin { animation: mk-pin 2.4s ease-in-out infinite; }
+.mk-flash { animation: mk-flash 3s ease-in-out infinite; }
+.mk-bubble { animation: mk-bubble 0.5s ease-out both; }
+.mk-typing { animation: mk-typing 1.4s ease-in-out infinite; }
+.mk-bar { animation: mk-bar 1.6s ease-in-out infinite alternate; transform-origin: bottom; }
+.mk-stream { animation: mk-stream 1.6s ease-out both; }
+.mk-fade-seq { animation: mk-fade-seq 2.4s ease-in-out infinite; }
 
 /* Respect users who prefer reduced motion — disable ambient movement. */
 @media (prefers-reduced-motion: reduce) {
